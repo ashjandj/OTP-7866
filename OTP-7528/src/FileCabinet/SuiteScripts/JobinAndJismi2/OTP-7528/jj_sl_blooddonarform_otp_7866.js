@@ -24,11 +24,11 @@
  *************************************************************************************************************************************8
 
  */
-define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
+define(['N/record', 'N/ui/serverWidget', 'N/format'],
     /**
  * @param{record} record
  */
-    (record, serverWidget, format, search) => {
+    (record, serverWidget, format) => {
         /**
          * Defines the Suitelet script trigger point.
          * @param {Object} scriptContext
@@ -47,26 +47,10 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
                 }
             }
             else if (scriptContext.request.method === 'POST') {
-                let recordId = createBloodDonarRecord(scriptContext.request.parameters, scriptContext.response);
-                if (recordId) {
-                    scriptContext.response.write(`
-                        <div style="text-align: center; margin-top: 50px;">
-                            <h3 style="color: green; font-family: Arial, sans-serif;">
-                                Success! Record has been created with the ID: <strong>${recordId}</strong>
-                            </h3>
-                            <p style="font-size: 16px;">Thank you for your submission.</p>
-                        </div>
-                    `);
-                } else {
-                    scriptContext.response.write(`
-                        <div style="text-align: center; margin-top: 50px;">
-                            <h3 style="color: red; font-family: Arial, sans-serif;">
-                                Record already exists.
-                            </h3>
-                            <p style="font-size: 16px;">Please try again with different data.</p>
-                        </div>
-                    `);
-                }
+                let recordId = createBloodDonarRecord(scriptContext.request.parameters,scriptContext.response);
+                if(recordId){
+                scriptContext.response.write(`<h3 style= "color:red">Record has been created with the id : ${recordId}
+                    </h3>`);}
             }
         }
         /**
@@ -164,8 +148,6 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
                     type: serverWidget.FieldType.DATE,
                     label: 'Last Donation Date'
                 });
-                lastDonationDate.isMandatory = true;
-                form.clientScriptModulePath = "SuiteScripts/JobinAndJismi2/OTP-7528/jj_cs_blood_donar_otp_7866.js"
 
                 form.addSubmitButton({
                     label: 'Submit'
@@ -195,7 +177,7 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
             * 
             * @throws {Error} - Logs an error if there is an issue with the entered values or if the record creation fails.
         */
-        function createBloodDonarRecord(scriptContextParameters, response) {
+        function createBloodDonarRecord(scriptContextParameters,response) {
             try {
                 let firstName = scriptContextParameters.custpage_jj_first_name_otp7866;
                 let lastName = scriptContextParameters.custpage_jj_last_name_otp7866;
@@ -205,13 +187,10 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
                 let bloodGroup = scriptContextParameters.custpage_jj_blood_group_otp7866;
                 let loadDate = format.parse({ value: lastDonationDate, type: format.Type.DATE });
                 let todayDate = new Date();
-                if (loadDate > todayDate) {
+                if(loadDate > todayDate)
+                {
                     response.write(`<h3 style= "color:red">The date cannot be a future date!!</h3>`);
                     throw "dateError";
-                }
-                log.error(recordExist(scriptContextParameters))
-                if (!recordExist(scriptContextParameters)) {
-                    return "";
                 }
                 let bloodDonationForm = record.create({
                     type: "customrecord_jj_blood_requirment",
@@ -240,7 +219,7 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
                         fieldId: "custrecord_jj_blood_group_otp7866",
                         value: bloodGroup
                     });
-
+                    
                     bloodDonationForm.setValue({
                         fieldId: "custrecord_jj_last_donation_otp7866",
                         value: loadDate
@@ -259,67 +238,6 @@ define(['N/record', 'N/ui/serverWidget', 'N/format', 'N/search'],
                 log.error("Error in the function createBloodDonarRecord", err);
             }
 
-        }
-        /**
-         * Checks if a blood donor record already exists based on the provided parameters.
-         * The search is performed using various filters such as first name, last name, gender, phone number, blood group, and last donation date.
-         * 
-         * @param {Object} scriptContextParameters - An object containing the parameters passed to the function.
-         * @param {string} scriptContextParameters.custpage_jj_first_name_otp7866 - The first name of the donor.
-         * @param {string} scriptContextParameters.custpage_jj_last_name_otp7866 - The last name of the donor.
-         * @param {string} scriptContextParameters.custpage_jj_gender_otp7866 - The gender of the donor (internal ID reference).
-         * @param {string} scriptContextParameters.custpage_jj_phone_otp7866 - The phone number of the donor.
-         * @param {string} scriptContextParameters.custpage_jj_last_donation_otp7866 - The last donation date of the donor.
-         * @param {string} scriptContextParameters.custpage_jj_blood_group_otp7866 - The blood group of the donor (internal ID reference).
-         * 
-         * @returns {boolean} - Returns `true` if no existing record matches the search criteria, indicating that the record doesn't already exist.
-         *                     Returns `false` if a matching record is found.
-         * 
-         * @throws {Error} - Logs an error if an issue occurs during the search process.
-         */
-        function recordExist(scriptContextParameters) {
-            let firstName = scriptContextParameters.custpage_jj_first_name_otp7866;
-            let lastName = scriptContextParameters.custpage_jj_last_name_otp7866;
-            let gender = scriptContextParameters.custpage_jj_gender_otp7866;
-            let phoneNumber = scriptContextParameters.custpage_jj_phone_otp7866;
-            let lastDonationDate = scriptContextParameters.custpage_jj_last_donation_otp7866;
-            let bloodGroup = scriptContextParameters.custpage_jj_blood_group_otp7866;
-
-            try {
-                let bloodDonarSearch = search.create({
-                    type: search.Type.CUSTOM_RECORD + '_jj_blood_requirment',
-                    title: 'JJ blood donar Search37',
-                    id: 'customsearch_jj_blood_donars36',
-                    columns: [{
-                        name: 'internalid'
-                    }
-                    ]
-                    , filters: [
-                        ["custrecord_jj_blood_group_otp7866", "anyof", bloodGroup],
-                        "AND",
-                        ["custrecord_jj_gender_otp7866", "anyof", gender],
-                        "AND",
-                        ["custrecord_jj_first_name_otp7866", "is", firstName],
-                        "AND",
-                        ["custrecord_jj_last_name_otp7866", "is", lastName],
-                        "AND",
-                        ["custrecord_jj_phone_otp7866", "is", phoneNumber],
-                        "AND",
-                        ["custrecord_jj_last_donation_otp7866", "on", lastDonationDate]
-                    ]
-
-                });
-
-                let internalIdExists = true;
-                bloodDonarSearch.run().each(function (result) {
-                    internalIdExists = false;
-                });
-                return internalIdExists;
-
-
-            } catch (err) {
-                log.error("error at search duplaicates", err)
-            }
         }
 
         return { onRequest }
